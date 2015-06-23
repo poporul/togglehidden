@@ -1,0 +1,27 @@
+#!/usr/bin/env osascript -l JavaScript
+
+function run(input, parameters) {
+  var app = Application.currentApplication();
+  app.includeStandardAdditions = true;
+
+  var commands = {
+    read:  "defaults read com.apple.finder AppleShowAllFiles",
+    write: "defaults write com.apple.finder AppleShowAllFiles",
+    kill:  "killall -HUP Finder /System/Library/CoreServices/Finder.app"
+  };
+
+  var showAllFiles = app.doShellScript(commands.read);
+
+  var result = showAllFiles === "NO" ? "YES" : "NO";
+  toggleHidden(result);
+
+  function toggleHidden(value) {
+    app.doShellScript(buildToggleCommand(value));
+  }
+
+  function buildToggleCommand(value) {
+    return commands.write + " " + value + " && " + commands.kill;
+  }
+
+  return input;
+}
