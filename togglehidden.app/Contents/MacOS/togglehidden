@@ -1,27 +1,56 @@
 #!/usr/bin/env osascript -l JavaScript
 
+function CommandRunner(application) {
+  var commands = [], results = [];
+  var newSession = false;
+
+  this.pipe = function(command) {
+    if (newSession) {
+      commands = [], results = [];
+      newSession = false;
+    }
+
+    commands.push(command);
+    return this;
+  };
+
+  this.getResults = function() {
+    return results;
+  };
+
+  this.getCommands = function() {
+    return commands;
+  };
+
+  this.execute = function() {
+    commands.forEach(function(command) {
+      try {
+        result = application.doShellScript(command);
+      } catch(e) {
+        console.log(e.message);
+      } finally {
+        results.push(result);
+      }
+    });
+
+    newSession = true;
+    return this;
+  };
+}
+
 function run(input, parameters) {
   var app = Application.currentApplication();
   app.includeStandardAdditions = true;
 
-  var commands = {
-    read:  "defaults read com.apple.finder AppleShowAllFiles",
-    write: "defaults write com.apple.finder AppleShowAllFiles",
-    kill:  "killall -HUP Finder /System/Library/CoreServices/Finder.app"
-  };
+  var commandRunner = new CommandRunner(app);
+  commandRunner.pipe("defaults read com.apple.finder AppleShowAllFiles").execute();
 
-  var showAllFiles = app.doShellScript(commands.read);
+  var showAllFiles = commandRunner.getResults()[0] === "NO" ? "YES" : "NO";
 
-  var result = showAllFiles === "NO" ? "YES" : "NO";
-  toggleHidden(result);
+  commandRunner.pipe("defaults write com.apple.finder AppleShowAllFiles " + showAllFiles);
+  commandRunner.pipe("killall -HUP Finder /System/Library/CoreServices/Finder.app");
 
-  function toggleHidden(value) {
-    app.doShellScript(buildToggleCommand(value));
-  }
-
-  function buildToggleCommand(value) {
-    return commands.write + " " + value + " && " + commands.kill;
-  }
+  commandRunner.execute();
 
   return input;
 }
