@@ -1,4 +1,5 @@
 #!/usr/bin/env osascript -l JavaScript
+// vim: set filetype=javascript:
 
 function CommandRunner(application) {
   var commands = [], results = [];
